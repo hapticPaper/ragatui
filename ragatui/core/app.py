@@ -110,23 +110,34 @@ class RagaTUIApp(App):
 
     async def on_mount(self) -> None:
         """Called when the app is mounted."""
+        # Add initial log message
+        self.state.add_log(f"[TUI] Starting {self.title}...")
+        self.state.set_metadata("status", "starting")
+
         # Start the target function if provided
         if self.target_func:
             self.run_worker(self._execute_target)
+        else:
+            self.state.add_log("[TUI] No target function provided")
 
     async def _execute_target(self) -> None:
         """Execute the target function."""
         if self.target_func:
+            self.state.add_log("[TUI] Executing function...")
+            self.state.set_metadata("status", "running")
             try:
                 # Execute the wrapped function
                 if callable(self.target_func):
                     result = self.target_func()
                     self.state.set_metadata("execution_result", result)
                     self.state.set_metadata("execution_status", "completed")
+                    self.state.set_metadata("status", "completed")
+                    self.state.add_log("[TUI] Execution completed successfully")
             except Exception as e:
                 self.state.set_metadata("execution_error", str(e))
                 self.state.set_metadata("execution_status", "failed")
-                self.state.add_log(f"Error: {str(e)}")
+                self.state.set_metadata("status", "failed")
+                self.state.add_log(f"[TUI] Error: {str(e)}")
 
 
 def run_tui(

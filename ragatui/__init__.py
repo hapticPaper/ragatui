@@ -5,6 +5,7 @@ This package provides decorators and utilities to easily convert Python scripts
 into interactive TUI applications with real-time monitoring and analysis.
 """
 
+from ragatui.config import configure_llm, configure_rag, get_config
 from ragatui.core.app import RagaTUIApp
 from ragatui.core.registry import WidgetRegistry
 from ragatui.decorators import (
@@ -27,4 +28,7 @@ __all__ = [
     "progress",
     "WidgetRegistry",
     "RagaTUIApp",
+    "configure_llm",
+    "configure_rag",
+    "get_config",
 ]

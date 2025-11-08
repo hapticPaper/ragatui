@@ -10,6 +10,46 @@ import structlog
 from ragatui.core.state import ExecutionState
 
 
+class TUIStream:
+    """
+    A stream that writes to ExecutionState in real-time.
+
+    This allows print() and other output to appear immediately in the TUI
+    instead of being buffered.
+    """
+
+    def __init__(self, state: Optional[ExecutionState] = None, prefix: str = ""):
+        self.state = state or ExecutionState()
+        self.prefix = prefix
+        self._buffer = ""
+
+    def write(self, text: str) -> int:
+        """Write text to the stream."""
+        if not text:
+            return 0
+
+        # Add to buffer
+        self._buffer += text
+
+        # Process complete lines
+        while "\n" in self._buffer:
+            line, self._buffer = self._buffer.split("\n", 1)
+            if line or self._buffer:  # Don't add empty lines unless more content follows
+                self.state.add_log(f"{self.prefix}{line}" if self.prefix else line)
+
+        return len(text)
+
+    def flush(self):
+        """Flush any remaining buffer."""
+        if self._buffer:
+            self.state.add_log(f"{self.prefix}{self._buffer}" if self.prefix else self._buffer)
+            self._buffer = ""
+
+    def isatty(self):
+        """Return False to indicate this is not a TTY."""
+        return False
+
+
 class LogCapture:
     """
     Context manager to capture logs and add them to ExecutionState.

@@ -3,12 +3,12 @@
 import argparse
 import functools
 import inspect
-import io
-from contextlib import redirect_stderr, redirect_stdout
+import sys
 from typing import Any, Callable, Optional
 
 from ragatui.core.app import run_tui
 from ragatui.core.state import ExecutionState, WidgetConfig
+from ragatui.utils.logging import TUIStream
 
 
 def tui_app(
@@ -42,31 +42,35 @@ def tui_app(
             state.set_metadata("function_name", func.__name__)
             state.set_metadata("start_time", None)
 
-            # Create a wrapped version that captures output
+            # Create a wrapped version that captures output in real-time
             def captured_func():
-                # Capture stdout and stderr
-                stdout_capture = io.StringIO()
-                stderr_capture = io.StringIO()
+                # Create TUI streams for real-time output
+                tui_stdout = TUIStream(state)
+                tui_stderr = TUIStream(state, prefix="[ERROR] ")
 
-                with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
-                    try:
-                        result = func(*args, **kwargs)
+                # Save original streams
+                old_stdout = sys.stdout
+                old_stderr = sys.stderr
 
-                        # Add captured output to logs
-                        stdout_content = stdout_capture.getvalue()
-                        if stdout_content:
-                            for line in stdout_content.splitlines():
-                                state.add_log(line)
+                try:
+                    # Redirect to TUI streams for real-time capture
+                    sys.stdout = tui_stdout
+                    sys.stderr = tui_stderr
 
-                        stderr_content = stderr_capture.getvalue()
-                        if stderr_content:
-                            for line in stderr_content.splitlines():
-                                state.add_log(f"[ERROR] {line}")
+                    result = func(*args, **kwargs)
 
-                        return result
-                    except Exception as e:
-                        state.add_log(f"[EXCEPTION] {str(e)}")
-                        raise
+                    # Flush any remaining output
+                    tui_stdout.flush()
+                    tui_stderr.flush()
+
+                    return result
+                except Exception as e:
+                    state.add_log(f"[EXCEPTION] {str(e)}")
+                    raise
+                finally:
+                    # Always restore original streams
+                    sys.stdout = old_stdout
+                    sys.stderr = old_stderr
 
             if auto_run:
                 return run_tui(captured_func, title=title, **app_kwargs)

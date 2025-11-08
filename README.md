@@ -55,6 +55,62 @@ For agentic development support:
 pip install ragatui[agentic]
 ```
 
+## Setup
+
+### Basic Usage (No LLM Required)
+
+ragatui works out of the box without any LLM configuration! Simply use the decorators and you'll get:
+- Real-time output capture in the TUI
+- Automatic metric tracking
+- Progress monitoring
+- Execution metadata display
+
+### Configuring Local LLM (Ollama)
+
+If you have Ollama running locally, configure ragatui to use it:
+
+```python
+from ragatui import configure_llm, tui_app
+
+# Configure Ollama before your app
+configure_llm(
+    provider="local",
+    endpoint="http://localhost:11434",  # Default Ollama endpoint
+    model="llama2"  # Or any model you have installed
+)
+
+@tui_app(title="My App")
+def main():
+    print("Running with Ollama monitoring!")
+    # Your code here
+```
+
+### Configuring Cloud LLMs
+
+For OpenAI:
+```python
+from ragatui import configure_llm
+
+configure_llm(
+    provider="openai",
+    model="gpt-4",
+    api_key="sk-..."  # Your OpenAI API key
+)
+```
+
+### Environment Variables
+
+You can also configure via environment variables:
+
+```bash
+# .env file
+RAGATUI_LLM_PROVIDER=local
+RAGATUI_LLM_ENDPOINT=http://localhost:11434
+RAGATUI_LLM_MODEL=llama2
+```
+
+Then just run your script - ragatui will pick up the configuration automatically!
+
 ## Quick Start
 
 ### Basic Example

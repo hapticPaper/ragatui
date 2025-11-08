@@ -35,7 +35,7 @@ class OutputWidget(RichLog):
             self._last_log_count = len(logs)
 
         # Keep only the last max_lines
-        if self.line_count > self.max_lines:
+        if len(self.lines) > self.max_lines:
             self.clear()
             recent_logs = self.state.get_logs(limit=self.max_lines)
             for log in recent_logs:
