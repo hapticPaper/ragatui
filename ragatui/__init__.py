@@ -5,16 +5,16 @@ This package provides decorators and utilities to easily convert Python scripts
 into interactive TUI applications with real-time monitoring and analysis.
 """
 
+from ragatui.core.app import RagaTUIApp
+from ragatui.core.registry import WidgetRegistry
 from ragatui.decorators import (
+    execution_info,
+    gauge,
+    progress,
     tui_app,
     tui_args,
     tui_graph,
-    gauge,
-    execution_info,
-    progress,
 )
-from ragatui.core.registry import WidgetRegistry
-from ragatui.core.app import RagaTUIApp
 
 __version__ = "0.1.0"
 

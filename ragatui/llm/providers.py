@@ -1,9 +1,9 @@
 """LLM provider abstraction for ragatui."""
 
-from abc import ABC, abstractmethod
-from typing import Optional, Dict, Any, List
-from enum import Enum
 import os
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import Any, Optional
 
 
 class LLMProviderType(Enum):
@@ -17,47 +17,47 @@ class LLMProviderType(Enum):
 class LLMProvider(ABC):
     """
     Abstract base class for LLM providers.
-    
+
     This allows ragatui to work with different LLM backends,
     both hosted (OpenAI, Anthropic) and local.
     """
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+
+    def __init__(self, config: Optional[dict[str, Any]] = None):
         self.config = config or {}
-    
+
     @abstractmethod
     async def generate(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         system_prompt: Optional[str] = None,
         **kwargs: Any
     ) -> str:
         """
         Generate a response from the LLM.
-        
+
         Args:
             prompt: The user prompt
             system_prompt: Optional system prompt
             **kwargs: Additional provider-specific arguments
-            
+
         Returns:
             Generated text response
         """
         pass
-    
+
     @abstractmethod
     async def analyze_logs(
         self,
-        logs: List[str],
+        logs: list[str],
         context: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Analyze logs and extract key information.
-        
+
         Args:
             logs: List of log messages
             context: Optional context about what to look for
-            
+
         Returns:
             Dictionary with analysis results
         """
@@ -66,12 +66,12 @@ class LLMProvider(ABC):
 
 class OpenAIProvider(LLMProvider):
     """OpenAI LLM provider."""
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+
+    def __init__(self, config: Optional[dict[str, Any]] = None):
         super().__init__(config)
         self.api_key = self.config.get("api_key") or os.getenv("OPENAI_API_KEY")
         self.model = self.config.get("model", "gpt-4")
-    
+
     async def generate(
         self,
         prompt: str,
@@ -82,12 +82,12 @@ class OpenAIProvider(LLMProvider):
         # TODO: Implement actual OpenAI API call
         # This is a placeholder for now
         return f"[OpenAI Response to: {prompt[:50]}...]"
-    
+
     async def analyze_logs(
         self,
-        logs: List[str],
+        logs: list[str],
         context: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze logs using OpenAI."""
         # TODO: Implement actual log analysis
         return {
@@ -100,12 +100,12 @@ class OpenAIProvider(LLMProvider):
 
 class LocalLLMProvider(LLMProvider):
     """Local LLM provider (e.g., Ollama, llama.cpp)."""
-    
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+
+    def __init__(self, config: Optional[dict[str, Any]] = None):
         super().__init__(config)
         self.model_path = self.config.get("model_path")
         self.endpoint = self.config.get("endpoint", "http://localhost:11434")
-    
+
     async def generate(
         self,
         prompt: str,
@@ -115,12 +115,12 @@ class LocalLLMProvider(LLMProvider):
         """Generate response using local LLM."""
         # TODO: Implement local LLM integration
         return f"[Local LLM Response to: {prompt[:50]}...]"
-    
+
     async def analyze_logs(
         self,
-        logs: List[str],
+        logs: list[str],
         context: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Analyze logs using local LLM."""
         # TODO: Implement actual log analysis
         return {
@@ -133,15 +133,15 @@ class LocalLLMProvider(LLMProvider):
 
 def get_llm_provider(
     provider_type: LLMProviderType = LLMProviderType.OPENAI,
-    config: Optional[Dict[str, Any]] = None
+    config: Optional[dict[str, Any]] = None
 ) -> LLMProvider:
     """
     Factory function to get an LLM provider.
-    
+
     Args:
         provider_type: Type of LLM provider to use
         config: Provider-specific configuration
-        
+
     Returns:
         LLM provider instance
     """

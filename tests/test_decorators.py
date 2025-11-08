@@ -74,17 +74,26 @@ def test_execution_info_decorator():
 def test_widget_registration():
     """Test that decorators register widgets."""
     state = ExecutionState()
-    state.reset()
     
-    # Creating a class with decorators should register widgets
-    obj = TestClass()
+    # Get initial widget count
+    initial_count = len(state.get_widgets())
     
+    # Define a new class with decorators - this will register new widgets
+    class NewTestClass:
+        def __init__(self):
+            self.test_metric = 0.0
+        
+        @tui_graph("test_metric_unique")
+        def update_metric(self, value):
+            self.test_metric = value
+    
+    # Check that a new widget was registered
     widgets = state.get_widgets()
-    # Should have at least the widgets from decorators
-    widget_names = [w.name for w in widgets]
+    assert len(widgets) > initial_count
     
-    assert any("loss" in name.lower() for name in widget_names)
-    assert any("accuracy" in name.lower() for name in widget_names)
+    # Check that our specific widget is there
+    widget_names = [w.name for w in widgets]
+    assert any("test_metric_unique" in name.lower() for name in widget_names)
 
 
 def test_multiple_updates():
