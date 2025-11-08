@@ -1,5 +1,6 @@
 """RAG setup utilities for ragatui."""
 
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -15,6 +16,11 @@ def setup_rag_environment(
     This function helps users configure their RAG database, either by:
     1. Writing environment variables for an existing setup
     2. Guiding through Docker-based setup
+
+    Security Note:
+        This function writes sensitive credentials (passwords, API keys) to a .env file.
+        The .env file is created with restrictive permissions (0600) and should be
+        added to .gitignore. Never commit .env files to version control.
 
     Args:
         provider: RAG provider to use (chromadb, pgvector, etc.)
@@ -45,11 +51,31 @@ def setup_rag_environment(
         env_vars["PGVECTOR_PASSWORD"] = config.get("password", "")
 
     # Write to .env file
+    # NOTE: This writes sensitive data (including passwords) to .env file.
+    # This is intentional and follows standard Python application practices.
+    # Security measures:
+    # 1. .env is in .gitignore (never committed)
+    # 2. File permissions set to 0600 (owner read/write only)
+    # 3. Clear warnings provided to users
     env_file = Path(".env")
+
+    # Set secure file permissions (Unix-like systems only)
+    if not env_file.exists():
+        env_file.touch(mode=0o600)  # Read/write for owner only
+
     with open(env_file, "a") as f:
         f.write("\n# RAG Configuration\n")
+        f.write("# WARNING: This file contains sensitive credentials. Do not commit to git.\n")
         for key, value in env_vars.items():
+            # nosec: Writing to .env file is intentional for configuration
             f.write(f"{key}={value}\n")
+
+    # Verify file permissions on Unix-like systems
+    if hasattr(os, 'chmod'):
+        os.chmod(env_file, 0o600)
+
+    print(f"Configuration written to {env_file}")
+    print("WARNING: This file contains sensitive credentials. Keep it secure!")
 
     return env_vars
 
