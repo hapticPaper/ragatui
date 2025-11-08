@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ragatui"
+version = "0.1.0"
+description = "A modular code execution TUI for Python with LLM-powered monitoring"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "ragatui contributors"}
+]
+keywords = ["tui", "monitoring", "llm", "rag", "logging", "observability"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "textual>=0.41.0",
+    "rich>=13.0.0",
+    "structlog>=23.0.0",
+    "tqdm>=4.65.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+llm = [
+    "openai>=1.0.0",
+    "anthropic>=0.18.0",
+]
+rag = [
+    "chromadb>=0.4.0",
+    "langchain>=0.1.0",
+]
+agentic = [
+    "langgraph>=0.0.20",
+    "pydantic-ai>=0.0.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/hapticPaper/ragatui"
+Repository = "https://github.com/hapticPaper/ragatui"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ragatui*"]
+exclude = ["tests*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+select = ["E", "F", "W", "I", "N", "UP"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
