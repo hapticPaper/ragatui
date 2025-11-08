@@ -21,7 +21,8 @@ class OutputWidget(RichLog):
         self.state = ExecutionState()
         self.max_lines = 1000
         self._last_log_count = 0
-        self.set_interval(0.5, self.refresh_output)
+        # Refresh more frequently for real-time updates (every 100ms)
+        self.set_interval(0.1, self.refresh_output)
 
     def refresh_output(self) -> None:
         """Refresh the output display with new logs."""
@@ -34,6 +35,9 @@ class OutputWidget(RichLog):
                 self.write(log)
             self._last_log_count = len(logs)
 
+            # Force a refresh to ensure new content is displayed immediately
+            self.refresh(layout=True)
+
         # Keep only the last max_lines
         if len(self.lines) > self.max_lines:
             self.clear()
@@ -41,3 +45,4 @@ class OutputWidget(RichLog):
             for log in recent_logs:
                 self.write(log)
             self._last_log_count = len(recent_logs)
+            self.refresh(layout=True)

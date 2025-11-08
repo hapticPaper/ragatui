@@ -20,7 +20,8 @@ class MetricsWidget(Static):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.state = ExecutionState()
-        self.set_interval(1.0, self.refresh_metrics)
+        # Refresh more frequently for real-time updates (every 200ms)
+        self.set_interval(0.2, self.refresh_metrics)
 
     def refresh_metrics(self) -> None:
         """Refresh the metrics display."""

@@ -121,18 +121,23 @@ class RagaTUIApp(App):
             self.state.add_log("[TUI] No target function provided")
 
     async def _execute_target(self) -> None:
-        """Execute the target function."""
+        """Execute the target function in a thread to allow real-time updates."""
         if self.target_func:
             self.state.add_log("[TUI] Executing function...")
             self.state.set_metadata("status", "running")
+
+            # Run the function in a thread pool to avoid blocking the TUI
+            # This allows the TUI to update in real-time as output is generated
+            import asyncio
+            loop = asyncio.get_event_loop()
+
             try:
-                # Execute the wrapped function
-                if callable(self.target_func):
-                    result = self.target_func()
-                    self.state.set_metadata("execution_result", result)
-                    self.state.set_metadata("execution_status", "completed")
-                    self.state.set_metadata("status", "completed")
-                    self.state.add_log("[TUI] Execution completed successfully")
+                # Execute in thread pool so TUI can update during execution
+                result = await loop.run_in_executor(None, self.target_func)
+                self.state.set_metadata("execution_result", result)
+                self.state.set_metadata("execution_status", "completed")
+                self.state.set_metadata("status", "completed")
+                self.state.add_log("[TUI] Execution completed successfully")
             except Exception as e:
                 self.state.set_metadata("execution_error", str(e))
                 self.state.set_metadata("execution_status", "failed")
