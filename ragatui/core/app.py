@@ -79,6 +79,10 @@ class RagaTUIApp(App):
         self.state = ExecutionState()
         self.registry = WidgetRegistry()
 
+        # Enable automatic refresh for smooth real-time updates
+        # This ensures the screen updates frequently even during heavy processing
+        self.auto_refresh = 0.05  # Refresh screen every 50ms
+
     def compose(self) -> ComposeResult:
         """Create the layout."""
         yield Header()
@@ -113,6 +117,11 @@ class RagaTUIApp(App):
         # Add initial log message
         self.state.add_log(f"[TUI] Starting {self.title}...")
         self.state.set_metadata("status", "starting")
+
+        # Give the UI a moment to fully render before starting execution
+        # This ensures widgets are visible when output starts appearing
+        import asyncio
+        await asyncio.sleep(0.1)
 
         # Start the target function if provided
         if self.target_func:
