@@ -47,40 +47,41 @@ def tui_app(
             state.set_metadata("function_name", func.__name__)
             state.set_metadata("start_time", None)
 
-            # Create a wrapped version that captures output in real-time
-            def captured_func():
-                # Create TUI streams for real-time output
-                tui_stdout = TUIStream(state)
-                tui_stderr = TUIStream(state, prefix="[ERROR] ")
+            # Create TUI streams for real-time output
+            # This must happen BEFORE the TUI starts to ensure universal capture
+            tui_stdout = TUIStream(state)
+            tui_stderr = TUIStream(state, prefix="[ERROR] ")
 
-                # Save original streams
-                old_stdout = sys.stdout
-                old_stderr = sys.stderr
+            # Save and redirect streams BEFORE calling run_tui
+            # This ensures stdout is captured from the very beginning
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            sys.stdout = tui_stdout
+            sys.stderr = tui_stderr
 
-                try:
-                    # Redirect to TUI streams for real-time capture
-                    sys.stdout = tui_stdout
-                    sys.stderr = tui_stderr
+            try:
+                # Create a wrapped version that executes the function
+                def captured_func():
+                    try:
+                        result = func(*args, **kwargs)
 
-                    result = func(*args, **kwargs)
+                        # Flush any remaining output
+                        tui_stdout.flush()
+                        tui_stderr.flush()
 
-                    # Flush any remaining output
-                    tui_stdout.flush()
-                    tui_stderr.flush()
+                        return result
+                    except Exception as e:
+                        state.add_log(f"[EXCEPTION] {str(e)}")
+                        raise
 
-                    return result
-                except Exception as e:
-                    state.add_log(f"[EXCEPTION] {str(e)}")
-                    raise
-                finally:
-                    # Always restore original streams
-                    sys.stdout = old_stdout
-                    sys.stderr = old_stderr
-
-            if auto_run:
-                return run_tui(captured_func, title=title, **app_kwargs)
-            else:
-                return captured_func()
+                if auto_run:
+                    return run_tui(captured_func, title=title, **app_kwargs)
+                else:
+                    return captured_func()
+            finally:
+                # Always restore original streams
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
 
         return wrapper
     return decorator
