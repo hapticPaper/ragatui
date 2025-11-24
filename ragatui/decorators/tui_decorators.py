@@ -40,13 +40,41 @@ def tui_app(
             state.set_metadata("function_name", func.__name__)
             state.set_metadata("start_time", None)
 
-            # The function is passed directly to run_tui
-            # It will be executed in a subprocess with OS-level stdout/stderr capture
-            # No need to wrap it with TUIStream redirection anymore
-            if auto_run:
-                return run_tui(func, title=title, **app_kwargs)
-            else:
-                return func(*args, **kwargs)
+            # Create TUI streams for real-time output
+            # This must happen BEFORE the TUI starts to ensure universal capture
+            tui_stdout = TUIStream(state)
+            tui_stderr = TUIStream(state, prefix="[ERROR] ")
+
+            # Save and redirect streams BEFORE calling run_tui
+            # This ensures stdout is captured from the very beginning
+            old_stdout = sys.stdout
+            old_stderr = sys.stderr
+            sys.stdout = tui_stdout
+            sys.stderr = tui_stderr
+
+            try:
+                # Create a wrapped version that executes the function
+                def captured_func():
+                    try:
+                        result = func(*args, **kwargs)
+
+                        # Flush any remaining output
+                        tui_stdout.flush()
+                        tui_stderr.flush()
+
+                        return result
+                    except Exception as e:
+                        state.add_log(f"[EXCEPTION] {str(e)}")
+                        raise
+
+                if auto_run:
+                    return run_tui(captured_func, title=title, **app_kwargs)
+                else:
+                    return captured_func()
+            finally:
+                # Always restore original streams
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
 
         return wrapper
     return decorator
