@@ -1,6 +1,5 @@
 """Widget for displaying captured output and logs."""
 
-from textual import work
 from textual.reactive import reactive
 from textual.widgets import RichLog
 
@@ -26,16 +25,8 @@ class OutputWidget(RichLog):
 
     def on_mount(self) -> None:
         """Start the update loop when widget is mounted."""
-        self._update_task = self.update_loop()
-
-    @work(exclusive=True, thread=False)
-    async def update_loop(self) -> None:
-        """Continuously update the output display."""
-        import asyncio
-
-        while True:
-            await asyncio.sleep(0.05)  # Check very frequently (50ms)
-            self.refresh_output()
+        # Start continuous updates using set_interval instead of @work
+        self.set_interval(0.01, self.refresh_output)
 
     def refresh_output(self) -> None:
         """Refresh the output display with new logs."""
@@ -50,9 +41,11 @@ class OutputWidget(RichLog):
             self._last_log_count = len(logs)
 
         # Keep only the last max_lines
-        if len(self.lines) > self.max_lines:
+        line_count = len(self.lines) if self.lines else 0
+        max_line_limit = self.max_lines or 1000
+        if line_count > max_line_limit:
             self.clear()
-            recent_logs = self.state.get_logs(limit=self.max_lines)
+            recent_logs = self.state.get_logs(limit=max_line_limit)
             for log in recent_logs:
                 self.write(log, scroll_end=True)
             self._last_log_count = len(recent_logs)

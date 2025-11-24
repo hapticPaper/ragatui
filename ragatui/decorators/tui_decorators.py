@@ -3,17 +3,10 @@
 import argparse
 import functools
 import inspect
-import sys
 from typing import Any, Callable, Optional
 
 from ragatui.core.app import run_tui
 from ragatui.core.state import ExecutionState, WidgetConfig
-from ragatui.utils.logging import TUIStream
-
-# Save the original stdout/stderr before Textual or anything else captures them
-# This ensures we can properly redirect output even when running inside a TUI
-_ORIGINAL_STDOUT = sys.stdout
-_ORIGINAL_STDERR = sys.stderr
 
 
 def tui_app(
@@ -47,40 +40,13 @@ def tui_app(
             state.set_metadata("function_name", func.__name__)
             state.set_metadata("start_time", None)
 
-            # Create a wrapped version that captures output in real-time
-            def captured_func():
-                # Create TUI streams for real-time output
-                tui_stdout = TUIStream(state)
-                tui_stderr = TUIStream(state, prefix="[ERROR] ")
-
-                # Save original streams
-                old_stdout = sys.stdout
-                old_stderr = sys.stderr
-
-                try:
-                    # Redirect to TUI streams for real-time capture
-                    sys.stdout = tui_stdout
-                    sys.stderr = tui_stderr
-
-                    result = func(*args, **kwargs)
-
-                    # Flush any remaining output
-                    tui_stdout.flush()
-                    tui_stderr.flush()
-
-                    return result
-                except Exception as e:
-                    state.add_log(f"[EXCEPTION] {str(e)}")
-                    raise
-                finally:
-                    # Always restore original streams
-                    sys.stdout = old_stdout
-                    sys.stderr = old_stderr
-
+            # The function is passed directly to run_tui
+            # It will be executed in a subprocess with OS-level stdout/stderr capture
+            # No need to wrap it with TUIStream redirection anymore
             if auto_run:
-                return run_tui(captured_func, title=title, **app_kwargs)
+                return run_tui(func, title=title, **app_kwargs)
             else:
-                return captured_func()
+                return func(*args, **kwargs)
 
         return wrapper
     return decorator

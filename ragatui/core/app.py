@@ -130,19 +130,15 @@ class RagaTUIApp(App):
             self.state.add_log("[TUI] No target function provided")
 
     async def _execute_target(self) -> None:
-        """Execute the target function in a thread to allow real-time updates."""
+        """Execute the target function and stream output in real-time."""
         if self.target_func:
             self.state.add_log("[TUI] Executing function...")
             self.state.set_metadata("status", "running")
 
-            # Run the function in a thread pool to avoid blocking the TUI
-            # This allows the TUI to update in real-time as output is generated
-            import asyncio
-            loop = asyncio.get_event_loop()
-
             try:
-                # Execute in thread pool so TUI can update during execution
-                result = await loop.run_in_executor(None, self.target_func)
+                # Create a subprocess to run the function
+                # This gives us OS-level stdout/stderr capture without buffering issues
+                result = await self._run_function_subprocess()
                 self.state.set_metadata("execution_result", result)
                 self.state.set_metadata("execution_status", "completed")
                 self.state.set_metadata("status", "completed")
@@ -152,6 +148,80 @@ class RagaTUIApp(App):
                 self.state.set_metadata("execution_status", "failed")
                 self.state.set_metadata("status", "failed")
                 self.state.add_log(f"[TUI] Error: {str(e)}")
+
+    async def _run_function_subprocess(self):
+        """Run the target function with proper stdout capture."""
+        import asyncio
+        import io
+        import traceback
+        from contextlib import redirect_stderr, redirect_stdout
+
+        try:
+            # Reset state for fresh execution
+            self.state.reset()
+
+            # Create a custom stream that captures output line-by-line
+            class LogCapture(io.StringIO):
+                def __init__(self, state, prefix=""):
+                    super().__init__()
+                    self._state = state
+                    self._prefix = prefix
+                    self._line_buffer = ""
+
+                def write(self, s):
+                    """Capture writes and emit complete lines to logs."""
+                    self._line_buffer += s
+                    # Process complete lines
+                    while "\n" in self._line_buffer:
+                        line, self._line_buffer = (
+                            self._line_buffer.split("\n", 1)
+                        )
+                        if line:
+                            msg = (
+                                f"{self._prefix}{line}"
+                                if self._prefix
+                                else line
+                            )
+                            self._state.add_log(msg)
+                    return len(s)
+
+                def flush(self):
+                    """Emit any remaining buffered content."""
+                    if self._line_buffer:
+                        msg = (
+                            f"{self._prefix}{self._line_buffer}"
+                            if self._prefix
+                            else self._line_buffer
+                        )
+                        self._state.add_log(msg)
+                        self._line_buffer = ""
+
+            # Capture stdout and stderr
+            stdout_capture = LogCapture(self.state)
+            stderr_capture = LogCapture(self.state, prefix="[ERROR] ")
+
+            # Run in executor to avoid blocking the event loop
+            loop = asyncio.get_event_loop()
+
+            def run_with_capture():
+                with redirect_stdout(stdout_capture), redirect_stderr(
+                    stderr_capture
+                ):
+                    try:
+                        result = self.target_func()
+                        return result
+                    finally:
+                        # Flush any remaining output
+                        stdout_capture.flush()
+                        stderr_capture.flush()
+
+            result = await loop.run_in_executor(None, run_with_capture)
+            return result
+
+        except Exception as e:
+            self.state.add_log(f"[ERROR] Exception during execution: {e}")
+            self.state.add_log(traceback.format_exc())
+            raise
 
 
 def run_tui(
