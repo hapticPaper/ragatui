@@ -3,17 +3,10 @@
 import argparse
 import functools
 import inspect
-import sys
 from typing import Any, Callable, Optional
 
 from ragatui.core.app import run_tui
 from ragatui.core.state import ExecutionState, WidgetConfig
-from ragatui.utils.logging import TUIStream
-
-# Save the original stdout/stderr before Textual or anything else captures them
-# This ensures we can properly redirect output even when running inside a TUI
-_ORIGINAL_STDOUT = sys.stdout
-_ORIGINAL_STDERR = sys.stderr
 
 
 def tui_app(
