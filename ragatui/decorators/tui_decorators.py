@@ -7,6 +7,8 @@ from typing import Any, Callable, Optional
 
 from ragatui.core.app import run_tui
 from ragatui.core.state import ExecutionState, WidgetConfig
+from ragatui.utils.logging import TUIStream
+import sys
 
 
 def tui_app(

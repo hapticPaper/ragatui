@@ -28,10 +28,38 @@ class RAGDatabase:
         Returns:
             True if connection successful
         """
-        # TODO: Implement actual database connection
-        # This could be ChromaDB, PostgreSQL with pgvector, etc.
-        self.connected = True
-        return True
+        if self.connected:
+            return True
+
+        from ragatui.config import get_config
+        config = get_config()
+
+        if not config.rag_enabled:
+            return False
+
+        try:
+            if config.rag_provider == "faiss":
+                from ragatui.rag.faiss_provider import FAISSRAGProvider
+                self.provider = FAISSRAGProvider({
+                    "persist_directory": config.rag_persist_directory
+                })
+            elif config.rag_provider == "chromadb":
+                # Keep existing ChromaDB logic or move to provider
+                # For now, let's focus on FAISS as requested
+                print("ChromaDB support is being deprecated in favor of FAISS.")
+                return False
+            else:
+                print(f"Unknown RAG provider: {config.rag_provider}")
+                return False
+
+            if self.provider.connect():
+                self.connected = True
+                return True
+            return False
+
+        except Exception as e:
+            print(f"Failed to connect to RAG provider: {e}")
+            return False
 
     async def store_execution(
         self,
@@ -52,8 +80,48 @@ class RAGDatabase:
         Returns:
             True if stored successfully
         """
-        # TODO: Implement actual storage
-        return True
+        if not self.connected:
+            if not await self.connect():
+                return False
+
+        try:
+            # Prepare text for embedding
+            summary_text = f"Execution: {metadata.get('title', 'Untitled')}\n"
+            summary_text += f"Date: {metadata.get('timestamp', '')}\n"
+            summary_text += f"Metrics: {metrics}\n"
+            summary_text += "Logs:\n" + "\n".join(logs[:50])
+            
+            # Generate embedding
+            from ragatui.llm.providers import get_llm_provider, LLMProviderType
+            from ragatui.config import get_config
+            
+            config = get_config()
+            provider_type = LLMProviderType(config.embedding_provider)
+            provider = get_llm_provider(
+                provider_type, 
+                config={
+                    "embedding_model": config.embedding_model, 
+                    "api_key": config.embedding_api_key,
+                    "endpoint": config.embedding_endpoint
+                }
+            )
+            
+            embedding = await provider.get_embedding(summary_text)
+            
+            # Store via provider
+            return self.provider.add(
+                ids=[execution_id],
+                documents=[summary_text],
+                embeddings=[embedding],
+                metadatas=[{
+                    "execution_id": execution_id,
+                    **{k: str(v) for k, v in metadata.items()},
+                    **{k: str(v) for k, v in metrics.items()}
+                }]
+            )
+        except Exception as e:
+            print(f"Failed to store execution in RAG: {e}")
+            return False
 
     async def query_similar_executions(
         self,
@@ -70,8 +138,52 @@ class RAGDatabase:
         Returns:
             List of similar execution records
         """
-        # TODO: Implement vector similarity search
-        return []
+        if not self.connected:
+            if not await self.connect():
+                return []
+
+        try:
+            # Create query text
+            query_text = f"Metrics: {current_metrics}"
+            
+            # Generate embedding
+            from ragatui.llm.providers import get_llm_provider, LLMProviderType
+            from ragatui.config import get_config
+            
+            config = get_config()
+            provider_type = LLMProviderType(config.embedding_provider)
+            provider = get_llm_provider(
+                provider_type, 
+                config={
+                    "embedding_model": config.embedding_model, 
+                    "api_key": config.embedding_api_key,
+                    "endpoint": config.embedding_endpoint
+                }
+            )
+            
+            embedding = await provider.get_embedding(query_text)
+            
+            # Query via provider
+            results = self.provider.query(
+                query_embeddings=[embedding],
+                n_results=limit
+            )
+            
+            # Format results
+            formatted_results = []
+            if results['ids']:
+                for i in range(len(results['ids'][0])):
+                    formatted_results.append({
+                        "id": results['ids'][0][i],
+                        "metadata": results['metadatas'][0][i],
+                        "document": results['documents'][0][i],
+                        "distance": results['distances'][0][i] if 'distances' in results else None
+                    })
+            
+            return formatted_results
+        except Exception as e:
+            print(f"Failed to query RAG: {e}")
+            return []
 
     async def get_execution_history(
         self,

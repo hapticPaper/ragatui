@@ -10,6 +10,8 @@ from ragatui.core.registry import WidgetRegistry
 from ragatui.core.state import ExecutionState
 from ragatui.widgets.metrics_widget import MetricsWidget
 from ragatui.widgets.output_widget import OutputWidget
+from ragatui.rag.database import RAGDatabase
+import uuid
 
 
 class RagaTUIApp(App):
@@ -134,6 +136,8 @@ class RagaTUIApp(App):
         if self.target_func:
             self.state.add_log("[TUI] Executing function...")
             self.state.set_metadata("status", "running")
+            execution_id = str(uuid.uuid4())
+            self.state.set_metadata("execution_id", execution_id)
 
             try:
                 # Create a subprocess to run the function
@@ -148,6 +152,29 @@ class RagaTUIApp(App):
                 self.state.set_metadata("execution_status", "failed")
                 self.state.set_metadata("status", "failed")
                 self.state.add_log(f"[TUI] Error: {str(e)}")
+            finally:
+                # Store execution in RAG database
+                try:
+                    db = RAGDatabase()
+                    if await db.connect():
+                        self.state.add_log("[TUI] Storing execution in RAG database...")
+                        
+                        # Prepare metrics for storage (convert MetricData to value)
+                        raw_metrics = self.state.get_all_metrics()
+                        metrics = {k: v.value for k, v in raw_metrics.items()}
+                        
+                        success = await db.store_execution(
+                            execution_id=execution_id,
+                            metadata=self.state.get_metadata(),
+                            logs=self.state.get_logs(),
+                            metrics=metrics
+                        )
+                        if success:
+                            self.state.add_log("[TUI] Execution stored in RAG")
+                        else:
+                            self.state.add_log("[TUI] Failed to store in RAG")
+                except Exception as e:
+                    self.state.add_log(f"[TUI] RAG Storage Error: {e}")
 
     async def _run_function_subprocess(self):
         """Run the target function with proper stdout capture."""

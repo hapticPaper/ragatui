@@ -34,6 +34,14 @@ class Config:
         # RAG Configuration
         self.rag_enabled = os.getenv("RAGATUI_RAG_ENABLED", "false").lower() == "true"
         self.rag_provider = os.getenv("RAGATUI_RAG_PROVIDER", "chromadb")
+        self.rag_storage_type = os.getenv("RAGATUI_RAG_STORAGE_TYPE", "memory") # memory, sqlite, server
+        self.rag_persist_directory = os.getenv("RAGATUI_RAG_PERSIST_DIRECTORY", "./chroma_db")
+
+        # Embedding Configuration
+        self.embedding_provider = os.getenv("RAGATUI_EMBEDDING_PROVIDER", "local")
+        self.embedding_model = os.getenv("RAGATUI_EMBEDDING_MODEL", "embeddinggemma")
+        self.embedding_api_key = os.getenv("RAGATUI_EMBEDDING_API_KEY", "")
+        self.embedding_endpoint = os.getenv("RAGATUI_EMBEDDING_ENDPOINT", "http://localhost:11434")
 
     def get_llm_config(self) -> dict[str, Any]:
         """Get LLM configuration as a dictionary."""
@@ -68,15 +76,50 @@ class Config:
         if api_key:
             self.llm_api_key = api_key
 
-    def enable_rag(self, provider: str = "chromadb"):
+    def get_embedding_config(self) -> dict[str, Any]:
+        """Get embedding configuration as a dictionary."""
+        return {
+            "provider": self.embedding_provider,
+            "model": self.embedding_model,
+            "api_key": self.embedding_api_key,
+        }
+
+    def set_embedding_config(
+        self,
+        provider: Optional[str] = None,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        endpoint: Optional[str] = None,
+    ):
+        """Set embedding configuration."""
+        if provider:
+            self.embedding_provider = provider
+        if model:
+            self.embedding_model = model
+        if api_key:
+            self.embedding_api_key = api_key
+        if endpoint:
+            self.embedding_endpoint = endpoint
+
+    def enable_rag(
+        self,
+        provider: str = "chromadb",
+        storage_type: str = "memory",
+        persist_directory: Optional[str] = None
+    ):
         """
         Enable RAG functionality.
 
         Args:
             provider: RAG provider ('chromadb', 'pgvector')
+            storage_type: Storage type ('memory', 'sqlite', 'server')
+            persist_directory: Directory for persistent storage (if sqlite)
         """
         self.rag_enabled = True
         self.rag_provider = provider
+        self.rag_storage_type = storage_type
+        if persist_directory:
+            self.rag_persist_directory = persist_directory
 
     def disable_rag(self):
         """Disable RAG functionality."""

@@ -47,9 +47,10 @@ Foundation for LLM-powered analysis in `ragatui/llm/`:
 RAG database integration in `ragatui/rag/`:
 
 - **RAGDatabase**: Database abstraction for execution history
-- **setup_rag_environment()**: TUI-based RAG configuration
-- **generate_docker_compose()**: Docker setup automation
-- **check_rag_dependencies()**: Dependency checking utility
+- **FAISSRAGProvider**: Local vector storage using FAISS
+- **CLI**: New `ragatui` command line interface for running scripts with RAG
+- **Automatic Storage**: Execution history (logs, metrics) automatically stored on completion
+- **Default Model**: Configured to use `embeddinggemma` by default for local embeddings
 
 ### 6. Utility Functions ✅
 
@@ -194,7 +195,7 @@ for item in progress(items, desc="Processing"):
 The foundation is complete! Future enhancements could include:
 
 1. **Complete LLM Integration**: Implement actual OpenAI/Anthropic API calls
-2. **RAG Database**: Implement ChromaDB/pgvector integration
+2. **Advanced RAG**: Add support for more vector databases (ChromaDB, pgvector)
 3. **TUI Configuration**: Build interactive configuration screens
 4. **More Widgets**: Add charts, tables, trees, etc.
 5. **Live Reload**: Hot-reload for development
